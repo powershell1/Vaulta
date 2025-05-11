@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import 'package:vaulta/screens/passcode.dart';
+import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart';
 
 // Global navigator key to access navigation from anywhere
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -12,17 +15,30 @@ void main() {
 
 // Wrapper to monitor app lifecycle
 class AppLifecycleWrapper extends StatefulWidget {
-  const AppLifecycleWrapper({Key? key}) : super(key: key);
+  const AppLifecycleWrapper({super.key});
 
   @override
   State<AppLifecycleWrapper> createState() => _AppLifecycleWrapperState();
 }
 
-class _AppLifecycleWrapperState extends State<AppLifecycleWrapper> with WidgetsBindingObserver {
+class _AppLifecycleWrapperState extends State<AppLifecycleWrapper>
+    with WidgetsBindingObserver {
   bool _showWhiteScreen = false;
+
+  void jailbreakDetection() async {
+    bool isJailbreak = await FlutterJailbreakDetection.jailbroken;
+    if (isJailbreak) {
+      if (Platform.isAndroid) {
+        SystemNavigator.pop();
+      } else if (Platform.isIOS) {
+        exit(0);
+      }
+    }
+  }
 
   @override
   void initState() {
+    jailbreakDetection();
     super.initState();
     WidgetsBinding.instance.addObserver(this);
   }
@@ -35,38 +51,44 @@ class _AppLifecycleWrapperState extends State<AppLifecycleWrapper> with WidgetsB
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Check for jailbreak detection when the app is resumed=
     if (state == AppLifecycleState.inactive) {
       setState(() {
         _showWhiteScreen = true;
       });
     }
     if (state == AppLifecycleState.resumed) {
+      jailbreakDetection();
+      navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const PasscodeScreen()),
+        (route) => false,
+      );
 
-      // When app comes back to foreground, navigate to passcode screen
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        navigatorKey.currentState?.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const PasscodeScreen()),
-              (route) => false,
-        );
+      // Reset white screen after navigation
+      if (mounted) {
         setState(() {
           _showWhiteScreen = false;
         });
-      });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return _showWhiteScreen ? Container(
-      color: Colors.white,
-      width: double.infinity,
-      height: double.infinity,
-    ) : const MyApp();
+    if (_showWhiteScreen) {
+      return Container(
+        color: Colors.white,
+        width: double.infinity,
+        height: double.infinity,
+      );
+    } else {
+      return const MyApp();
+    }
   }
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +105,7 @@ class MyApp extends StatelessWidget {
 }
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
