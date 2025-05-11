@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:vaulta/main.dart';
 import 'dart:ui';
+import 'package:bcrypt/bcrypt.dart';
+import 'package:flutter_udid/flutter_udid.dart';
 
 class PasscodeScreen extends StatefulWidget {
-  const PasscodeScreen({Key? key}) : super(key: key);
+  const PasscodeScreen({super.key});
 
   @override
   _PasscodeScreenState createState() => _PasscodeScreenState();
@@ -13,7 +15,7 @@ class PasscodeScreen extends StatefulWidget {
 class PasscodeDisplay extends StatelessWidget {
   final bool isInput;
 
-  const PasscodeDisplay({Key? key, required this.isInput}) : super(key: key);
+  const PasscodeDisplay({super.key, required this.isInput});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +35,7 @@ class PasscodeDisplay extends StatelessWidget {
         boxShadow: isInput
             ? [
                 BoxShadow(
-                  color: Theme.of(context).primaryColor.withOpacity(0.3),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   blurRadius: 8,
                   spreadRadius: 1,
                 )
@@ -50,11 +52,26 @@ class _PasscodeScreenState extends State<PasscodeScreen>
   final FocusNode _focusNode = FocusNode();
   late AnimationController _animationController;
   late Animation<double> _animation;
-  bool _isLoading = false;
+  late bool _isLoading = false;
+  late bool _unlocked = false;
+  late String _hashedPasscode;
+
+  Future<void> _generateHashedPasscode() async {
+    // In production, you'd retrieve this from secure storage instead of generating it
+    String salt;
+    print(BCrypt.gensalt());
+    salt = await FlutterUdid.udid;
+    salt = "\$2a\$10\$${salt}p.pummiphach";
+    _hashedPasscode = BCrypt.hashpw(
+      "123456",
+      salt,
+    );
+  }
 
   @override
   void initState() {
     super.initState();
+    _generateHashedPasscode();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -80,10 +97,13 @@ class _PasscodeScreenState extends State<PasscodeScreen>
   }
 
   Future<bool> _isPasscodeValid(String passcode) async {
-    // Simulate a network call or database check
-    await Future.delayed(const Duration(seconds: 1));
-    return passcode ==
-        '123456'; // Replace with your actual passcode validation logic
+    bool checkPass = BCrypt.checkpw(
+      passcode,
+      _hashedPasscode,
+    );
+    await Future.delayed(const Duration(milliseconds: 500));
+    _unlocked = checkPass;
+    return checkPass;
   }
 
   Future<void> checkPasscode(String passcode) async {
@@ -145,7 +165,7 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                 width: 300,
                 height: 300,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -157,7 +177,7 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                 width: 300,
                 height: 300,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -183,15 +203,16 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 30, vertical: 40),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.surface.withOpacity(0.8),
+                            color: theme.colorScheme.surface
+                                .withValues(alpha: 0.8),
                             borderRadius: BorderRadius.circular(24),
                             border: Border.all(
-                              color:
-                                  theme.colorScheme.onSurface.withOpacity(0.1),
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.1),
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 20,
                                 spreadRadius: 1,
                               )
@@ -212,7 +233,9 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                                       ),
                                     )
                                   : Icon(
-                                      Icons.lock_rounded,
+                                      _unlocked
+                                          ? Icons.lock_open_rounded
+                                          : Icons.lock_outline,
                                       size: 48,
                                       color: theme.colorScheme.primary,
                                     ),
@@ -243,7 +266,7 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                                 'Enter your 6-digit passcode',
                                 style: TextStyle(
                                   color: theme.colorScheme.onSurface
-                                      .withOpacity(0.6),
+                                      .withValues(alpha: 0.6),
                                   fontSize: 14,
                                 ),
                               ),
