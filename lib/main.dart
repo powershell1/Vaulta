@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vaulta/screens/chat.dart';
+import 'package:vaulta/screens/messagelist.dart';
 import 'package:vaulta/screens/passcode.dart';
 import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart';
 
@@ -49,20 +51,28 @@ class _AppLifecycleWrapperState extends State<AppLifecycleWrapper>
     super.dispose();
   }
 
+  bool isHidden = false;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Check for jailbreak detection when the app is resumed=
+    // Check for jailbreak detection when the app is resumed
+    if (state == AppLifecycleState.hidden) {
+      isHidden = true;
+    }
     if (state == AppLifecycleState.inactive) {
       setState(() {
         _showWhiteScreen = true;
       });
     }
     if (state == AppLifecycleState.resumed) {
-      jailbreakDetection();
-      navigatorKey.currentState?.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const PasscodeScreen()),
-        (route) => false,
-      );
+      if (isHidden) {
+        isHidden = false;
+        jailbreakDetection();
+        navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const PasscodeScreen()),
+          (route) => false,
+        );
+      }
 
       // Reset white screen after navigation
       if (mounted) {
@@ -75,15 +85,19 @@ class _AppLifecycleWrapperState extends State<AppLifecycleWrapper>
 
   @override
   Widget build(BuildContext context) {
-    if (_showWhiteScreen) {
-      return Container(
-        color: Colors.white,
-        width: double.infinity,
-        height: double.infinity,
-      );
-    } else {
-      return const MyApp();
-    }
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Stack(
+        children: [
+          const MyApp(),
+          _showWhiteScreen ? Container(
+            color: Colors.white,
+            width: double.infinity,
+            height: double.infinity,
+          ) : const SizedBox.shrink(),
+        ],
+      ),
+    );
   }
 }
 
@@ -93,6 +107,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       title: 'Vaulta',
       theme: ThemeData(
@@ -100,22 +115,6 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const PasscodeScreen(),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vaulta'),
-      ),
-      body: const Center(
-        child: Text('Welcome to Vaulta'),
-      ),
     );
   }
 }

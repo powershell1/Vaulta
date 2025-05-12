@@ -4,6 +4,7 @@ import 'package:vaulta/main.dart';
 import 'dart:ui';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter_udid/flutter_udid.dart';
+import 'package:vaulta/screens/messagelist.dart';
 
 class PasscodeScreen extends StatefulWidget {
   const PasscodeScreen({super.key});
@@ -59,7 +60,6 @@ class _PasscodeScreenState extends State<PasscodeScreen>
   Future<void> _generateHashedPasscode() async {
     // In production, you'd retrieve this from secure storage instead of generating it
     String salt;
-    print(BCrypt.gensalt());
     salt = await FlutterUdid.udid;
     salt = "\$2a\$10\$${salt}p.pummiphach";
     _hashedPasscode = BCrypt.hashpw(
@@ -117,7 +117,7 @@ class _PasscodeScreenState extends State<PasscodeScreen>
       if (isValid) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => const MessageListScreen()),
         );
       } else {
         _animationController
